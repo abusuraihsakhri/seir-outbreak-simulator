@@ -1,7 +1,6 @@
 """
 Specialized Domain Worker Agents for Seir Outbreak Simulator.
-Domain: Antimicrobial Stewardship & Microbiology
-Standard: CLSI M100 / EUCAST / CDC NHSN Guidelines
+Example worker thresholds; not clinical laboratory reference standards
 """
 import uuid
 from typing import Dict, Any, List, Optional
@@ -20,7 +19,7 @@ class InvariantQCWorker:
                 origin_worker="InvariantQCWorker",
                 urgency=UrgencyLevel.ELEVATED,
                 summary="Primary Metric Threshold Exceeded",
-                technical_details=f"Primary measurement ({payload.primary_metric:.2f}) exceeds upper reference limit (25.00) under CLSI M100 / EUCAST / CDC NHSN Guidelines.",
+                technical_details=f"Primary measurement ({payload.primary_metric:.2f}) exceeds upper reference limit (25.00) using an illustrative, non-clinical threshold.",
                 actionable_remediation="Initiate recalibration workflow and review secondary parameters.",
             ))
         return alerts
@@ -57,7 +56,7 @@ class ProtocolConformanceWorker:
                 origin_worker="ProtocolConformanceWorker",
                 urgency=UrgencyLevel.ELEVATED,
                 summary="Protocol Conformance Discordance Detected",
-                technical_details=f"Descriptor '{payload.status_descriptor}' indicates discordance with CLSI M100 / EUCAST / CDC NHSN Guidelines standards.",
+                technical_details=f"Descriptor '{payload.status_descriptor}' matches an illustrative alert keyword (not validated against clinical standards).",
                 actionable_remediation="Re-evaluate input specimen or rerun secondary confirmation assay.",
             ))
         return alerts

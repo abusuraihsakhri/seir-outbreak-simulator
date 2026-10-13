@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import math
 from typing import List, Sequence, Tuple
 
 import numpy as np
@@ -54,6 +55,17 @@ class ModelParams:
     vaccination_efficacy: float = 1.0     # fraction in [0, 1]
 
     def __post_init__(self) -> None:
+        for name in (
+            "population", "r0", "incubation_period", "infectious_period",
+            "initial_infected", "initial_exposed", "intervention_reduction",
+            "vaccination_coverage", "vaccination_efficacy",
+        ):
+            if not math.isfinite(getattr(self, name)):
+                raise ValueError(f"{name} must be finite")
+        if self.intervention_day is not None and (
+            not math.isfinite(self.intervention_day) or self.intervention_day < 0
+        ):
+            raise ValueError("intervention_day must be a finite non-negative day")
         if self.model not in ("sir", "seir", "seirv"):
             raise ValueError(f"model must be 'sir', 'seir' or 'seirv', got {self.model!r}")
         if self.population <= 0:
@@ -115,8 +127,8 @@ class SimulationResult:
 
     @property
     def total_attack_rate(self) -> float:
-        """Fraction of the population that is ultimately infected (R_final / N)."""
-        return float(self.R[-1] / self.params.population)
+        """Cumulative infected fraction by the final simulated day (E + I + R) / N."""
+        return float((self.E[-1] + self.I[-1] + self.R[-1]) / self.params.population)
 
     @property
     def final_susceptible_fraction(self) -> float:
@@ -225,33 +237,55 @@ def simulate(params: ModelParams, days: float = 180.0, points_per_day: int = 4) 
     Uses scipy's `solve_ivp` (adaptive-step Runge-Kutta, RK45) with dense
     output evaluated on a uniform grid for plotting and peak detection.
     """
-    if days <= 0:
-        raise ValueError("days must be positive")
+    if not math.isfinite(days) or days <= 0:
+        raise ValueError("days must be finite and positive")
+    if isinstance(points_per_day, bool) or not isinstance(points_per_day, int) or points_per_day < 1:
+        raise ValueError("points_per_day must be a positive integer")
+
+    n_eval = max(math.ceil(days * points_per_day) + 1, 2)
+    if n_eval > 200_001:
+        raise ValueError("requested evaluation grid exceeds 200,001 points")
 
     y0, compartments = _initial_state(params)
     rhs = {"sir": _sir_rhs, "seir": _seir_rhs, "seirv": _seirv_rhs}[params.model]
-
-    n_eval = max(int(days * points_per_day), 2)
     t_eval = np.linspace(0.0, days, n_eval)
 
-    solution = solve_ivp(
-        fun=rhs,
-        t_span=(0.0, days),
-        y0=y0,
-        args=(params,),
-        method="RK45",
-        t_eval=t_eval,
-        rtol=1e-8,
-        atol=1e-6,
-        max_step=1.0,
-    )
-    if not solution.success:
-        raise RuntimeError(f"ODE integration failed: {solution.message}")
+    def integrate(start: float, stop: float, state: np.ndarray, p: ModelParams):
+        solution = solve_ivp(
+            fun=rhs,
+            t_span=(start, stop),
+            y0=state,
+            args=(p,),
+            method="RK45",
+            dense_output=True,
+            rtol=1e-8,
+            atol=1e-6,
+            max_step=1.0,
+        )
+        if not solution.success:
+            raise RuntimeError(f"ODE integration failed: {solution.message}")
+        return solution
 
-    values = dict(zip(compartments, solution.y))
-    zeros = np.zeros_like(solution.t)
+    # An adaptive RK step crossing a discontinuous intervention boundary can
+    # smooth the rate change. Integrate the two smooth segments separately.
+    day = params.intervention_day
+    split = day is not None and params.intervention_reduction > 0 and 0 < day < days
+    if split:
+        before = dataclasses.replace(params, intervention_day=None, intervention_reduction=0.0)
+        after = dataclasses.replace(params, intervention_day=0.0)
+        first = integrate(0.0, day, y0, before)
+        second = integrate(day, days, first.y[:, -1], after)
+        before_mask = t_eval < day
+        ys = np.empty((len(compartments), len(t_eval)), dtype=float)
+        ys[:, before_mask] = first.sol(t_eval[before_mask])
+        ys[:, ~before_mask] = second.sol(t_eval[~before_mask])
+    else:
+        ys = integrate(0.0, days, y0, params).sol(t_eval)
+
+    values = dict(zip(compartments, ys))
+    zeros = np.zeros_like(t_eval)
     return SimulationResult(
-        t=solution.t,
+        t=t_eval,
         S=values["S"],
         E=values.get("E", zeros),
         I=values["I"],

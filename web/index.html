@@ -1,236 +1,128 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seir Outbreak Simulator — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Explore SIR, SEIR, and SEIRV epidemic curves and compare hypothetical interventions locally.">
+  <title>SEIR Outbreak Simulator</title>
+  <style>
+    :root { color-scheme: dark; --bg:#090f1d; --panel:#141e30; --border:#344158; --text:#ecf3fc; --muted:#c2cddd; --blue:#60a5fa; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:clamp(14px,2vw,32px); background:var(--bg); color:var(--text); font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { max-width:1360px; margin:auto; }
+    header { border-bottom:1px solid var(--border); padding-bottom:18px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px; }
+    h1 { font-size:clamp(1.7rem,3vw,2.3rem); margin:0; line-height:1.2; }
+    h2 { margin:0 0 12px; font-size:1.18rem; }
+    p { margin:8px 0; }
+    .muted, small { color:var(--muted); }
+    .tag { border:1px solid #296a59; color:#8af2bd; padding:5px 10px; border-radius:18px; font-size:.8rem; white-space:nowrap; }
+    .layout { display:grid; grid-template-columns:minmax(315px,385px) minmax(0,1fr); gap:18px; align-items:start; }
+    .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; min-width:0; }
+    fieldset { border:0; border-top:1px solid var(--border); padding:14px 0 2px; margin:12px 0 0; min-width:0; }
+    legend { color:var(--blue); font-weight:700; padding:0 8px 0 0; }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .field { min-width:0; }
+    .field.full { grid-column:span 2; }
+    label { display:block; color:var(--muted); font-size:.85rem; margin-bottom:5px; }
+    input,select { background:#0a1425; border:1px solid #58687d; border-radius:7px; color:var(--text); padding:9px 10px; width:100%; font:inherit; }
+    input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+    input:invalid { border-color:#ffaaa9; }
+    button { padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; background:#2563eb; color:white; border:1px solid #60a5fa; border-radius:8px; }
+    button:hover:not(:disabled) { background:#1d4ed8; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    button.secondary { background:transparent; color:var(--text); }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+    .controls button { flex:1; }
+    .status { padding:10px 12px; margin:14px 0 0; border-radius:8px; background:#1a3045; color:#d9edff; }
+    .status.error { color:#ffd1d1; background:#48262c; }
+    .status.success { color:#b4f8d4; background:#15372f; }
+    .chart-wrap { width:100%; overflow-x:auto; }
+    svg { display:block; width:100%; min-width:480px; height:auto; background:#0c1627; border-radius:8px; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; font-variant-numeric:tabular-nums; }
+    th,td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:right; }
+    th:first-child,td:first-child { text-align:left; }
+    th { color:var(--muted); font-size:.85rem; white-space:nowrap; }
+    .scenario::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:9px; background:var(--series-color); }
+    .notes { margin-top:18px; background:#101a2a; border:1px solid var(--border); border-radius:9px; padding:12px 15px; }
+    .notes p { margin:5px 0; }
+    a { color:#93c5fd; }
+    @media(max-width:920px) { .layout { grid-template-columns:1fr; } }
+    @media(max-width:560px) { .panel { padding:14px; } .fields { gap:10px; } .controls button { flex-basis:100%; } .table-wrap { overflow-x:auto; } table { min-width:480px; } }
+  </style>
+  <script type="module" src="./app.mjs"></script>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Seir Outbreak Simulator</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
+<main>
+  <header>
+    <div>
+      <h1>SEIR Outbreak Simulator</h1>
+      <p class="muted">Explore hypothetical epidemic curves using SIR, SEIR, and SEIRV compartment models.</p>
     </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
+    <span class="tag">Local computation · No account required</span>
+  </header>
+  <div class="layout">
+    <section class="panel" aria-labelledby="parameters">
+      <h2 id="parameters">Model parameters</h2>
+      <form id="controls">
+        <fieldset>
+          <legend>Population & transmission</legend>
+          <div class="fields">
+            <div class="field full"><label for="model">Compartment model</label>
+              <select id="model" name="model">
+                <option value="seir">SEIR · Exposed phase</option>
+                <option value="sir">SIR · No exposed phase</option>
+              </select>
             </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
+            <div class="field"><label for="population">Population (people)</label><input id="population" name="population" type="number" required min="1" max="1000000000" step="1" value="100000"></div>
+            <div class="field"><label for="days">Duration (days)</label><input id="days" name="days" type="number" required min="1" max="730" step="1" value="180"></div>
+            <div class="field"><label for="r0">Basic reproduction number R₀</label><input id="r0" name="r0" type="number" required min="0" max="8" step="any" value="2.5"></div>
+            <div class="field"><label for="incubationPeriod">Mean latent period (days)</label><input id="incubationPeriod" name="incubationPeriod" type="number" required min="1" max="100" step="any" value="5.2"></div>
+            <div class="field"><label for="infectiousPeriod">Mean infectious period (days)</label><input id="infectiousPeriod" name="infectiousPeriod" type="number" required min="1" max="100" step="any" value="7"></div>
+            <div class="field"><label for="initialInfected">Initially infectious</label><input id="initialInfected" name="initialInfected" type="number" required min="0" step="any" value="10"></div>
+            <div class="field"><label for="initialExposed">Initially exposed (SEIR)</label><input id="initialExposed" name="initialExposed" type="number" required min="0" step="any" value="0"></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Contact-rate intervention</legend>
+          <div class="fields">
+            <div class="field"><label for="interventionDay">Start day (blank = none)</label><input id="interventionDay" name="interventionDay" type="number" min="0" max="730" step="any" value="30"></div>
+            <div class="field"><label for="interventionReduction">Contact reduction (%)</label><input id="interventionReduction" name="interventionReduction" type="number" required min="0" max="99.99" step="any" value="50"></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Pre-outbreak vaccination</legend>
+          <div class="fields">
+            <div class="field"><label for="vaccinationCoverage">Coverage (%)</label><input id="vaccinationCoverage" name="vaccinationCoverage" type="number" required min="0" max="100" step="any" value="40"></div>
+            <div class="field"><label for="vaccinationEfficacy">Protection efficacy (%)</label><input id="vaccinationEfficacy" name="vaccinationEfficacy" type="number" required min="0" max="100" step="any" value="90"></div>
+          </div>
+        </fieldset>
+        <div class="controls">
+          <button type="submit">Run simulation</button>
+          <button class="secondary" type="button" id="export" disabled>Export CSV</button>
         </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Seir Outbreak Simulator Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "seir-outbreak-simulator",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+      </form>
+      <p class="status" role="status" aria-live="polite" id="status">Preparing simulation…</p>
+    </section>
+    <section class="panel" aria-labelledby="outcomes">
+      <h2 id="outcomes">Scenario comparison</h2>
+      <p class="muted">Infectious population (% of total), evaluated daily. Each scenario uses the same starting epidemic conditions.</p>
+      <div class="chart-wrap">
+        <svg id="chart" viewBox="0 0 940 350" role="img" aria-label="Epidemic curves showing infectious population percentage by day"></svg>
+      </div>
+      <div class="table-wrap">
+        <table aria-label="Peak prevalence and cumulative infections by scenario">
+          <thead><tr><th scope="col">Scenario</th><th scope="col">Peak infectious</th><th scope="col">Peak day</th><th scope="col">Cumulative infected</th></tr></thead>
+          <tbody id="results"></tbody>
+        </table>
+      </div>
+      <div class="notes">
+        <h2>Interpretation and limitations</h2>
+        <p>Deterministic, homogeneous-mixing model with a fixed population, permanent recovery, no births or deaths, and a single permanent contact-rate change. Vaccination confers sterilizing protection at day zero; protection is modeled as coverage × efficacy.</p>
+        <p>“Cumulative infected” includes exposed, currently infectious, and recovered individuals at the final simulated day; it is not a forecast of reported cases. SIR ignores the initial exposed input. Vaccination scenarios use SEIRV, so comparison with a SIR baseline also changes model structure.</p>
+        <p class="muted">For research and teaching only. Not calibrated to surveillance data and not for clinical or public-health decisions. All computations and CSV export run in your browser; no input is transmitted to a server.</p>
+      </div>
+    </section>
+  </div>
+</main>
 </body>
 </html>

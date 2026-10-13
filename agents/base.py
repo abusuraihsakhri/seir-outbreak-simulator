@@ -3,6 +3,7 @@ Enterprise Security, PHI Outbound Guard, and HMAC-SHA256 Audit Trail.
 
 """
 import os
+import secrets
 import re
 import json
 import time
@@ -24,7 +25,7 @@ PHI_PATTERNS = [
 
 
 class SecurityException(Exception):
-    """Raised when outbound data violates HIPAA Safe Harbor or contains raw PHI."""
+    """Raised when a pattern-based check detects a possible sensitive identifier."""
     pass
 
 
@@ -56,8 +57,26 @@ class PHIGuard:
 
 class AuditTrail:
     """Cryptographic Tamper-Evident HMAC-SHA256 Audit Trail."""
+
+    _SIGNED_FIELDS = (
+        "audit_id", "timestamp", "actor", "actor_tier",
+        "event_type", "payload_hash", "prev_hash",
+    )
+
+    def _signature(self, entry: Dict[str, Any]) -> str:
+        payload = json.dumps(
+            {key: entry[key] for key in self._SIGNED_FIELDS},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hmac.new(self.secret_key, payload, hashlib.sha256).hexdigest()
+
     def __init__(self, secret_key: Optional[str] = None):
-        self.secret_key = (secret_key or os.getenv("AUDIT_SECRET_KEY", "seir-outbreak-simulator-master-audit-key-2026")).encode("utf-8")
+        # Never use a repository-embedded signing key. Without configuration,
+        # use an ephemeral key: a process-local audit chain cannot be verified
+        # across restarts unless AUDIT_SECRET_KEY is supplied securely.
+        configured = secret_key if secret_key is not None else os.getenv("AUDIT_SECRET_KEY")
+        self.secret_key = configured.encode("utf-8") if configured else secrets.token_bytes(32)
         self.logs: List[Dict[str, Any]] = []
 
     def log(self, actor: str, actor_tier: str, event_type: str, details: Dict[str, Any]) -> Dict[str, Any]:
@@ -67,8 +86,6 @@ class AuditTrail:
         audit_id = f"AUDIT-{int(time.time()*1000)}-{len(self.logs)+1}"
         ts = datetime.now(timezone.utc).isoformat()
         prev_hash = self.logs[-1]["current_hash"] if self.logs else "GENESIS_BLOCK_0000000000000000"
-        sign_string = f"{audit_id}|{ts}|{actor}|{actor_tier}|{event_type}|{payload_hash}|{prev_hash}"
-        signature = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
         entry = {
             "audit_id": audit_id,
             "timestamp": ts,
@@ -77,20 +94,27 @@ class AuditTrail:
             "event_type": event_type,
             "payload_hash": payload_hash,
             "prev_hash": prev_hash,
-            "current_hash": signature,
         }
+        entry["current_hash"] = self._signature(entry)
         self.logs.append(entry)
         return entry
 
     def verify_integrity(self) -> bool:
-        for i, entry in enumerate(self.logs):
-            prev = self.logs[i-1]["current_hash"] if i > 0 else "GENESIS_BLOCK_0000000000000000"
-            if entry["prev_hash"] != prev:
+        prev = "GENESIS_BLOCK_0000000000000000"
+        for entry in self.logs:
+            try:
+                if entry["prev_hash"] != prev:
+                    return False
+                expected = self._signature(entry)
+                if not hmac.compare_digest(expected, entry["current_hash"]):
+                    return False
+                prev = entry["current_hash"]
+            except (KeyError, TypeError, ValueError):
                 return False
         return True
 
     def get_trail(self) -> List[Dict[str, Any]]:
-        return self.logs
+        return [entry.copy() for entry in self.logs]
 
 
 GLOBAL_AUDIT = AuditTrail()
