@@ -49,3 +49,12 @@ def test_batch_boolean_false_and_true_are_distinct(tmp_path, capsys):
         rows = list(csv.DictReader(f))
     assert rows[0]["overall_urgency"] == "ROUTINE"
     assert rows[1]["overall_urgency"] == "CRITICAL_STAT_PANIC"
+
+
+def test_hmac_signature_cannot_be_rewritten_by_moving_delimiters():
+    trail = AuditTrail(secret_key="test-only-in-memory-key")
+    trail.log("alice|admin", "tier", "event", {"status": "OK"})
+    assert trail.verify_integrity()
+    trail.logs[0]["actor"] = "alice"
+    trail.logs[0]["actor_tier"] = "admin|tier"
+    assert not trail.verify_integrity()
