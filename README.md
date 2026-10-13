@@ -1,112 +1,66 @@
-# Seir Outbreak Simulator
+# SEIR Outbreak Simulator
 
-> **Domain:** Infectious Disease Surveillance & Microbiology  
-> **Reference Guidelines & Standards:** `CLSI M100, EUCAST & CDC NHSN Clinical Standards`
+Deterministic SIR, SEIR and SEIRV epidemic simulations with contact-reduction and pre-outbreak vaccination scenarios. The repository provides an interactive browser application and a Python/SciPy numerical implementation.
 
-<div align="center">
+## Browser application
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
-
----
-
-## 📖 What It Does
-
-SEIR Outbreak Simulator
-========================
-
-A compartmental epidemic model (Kermack-McKendrick SEIR/SIR) integrated
-numerically with scipy's solve_ivp, extended with:
-
-  * A piecewise-constant contact-rate reduction to represent an
-    intervention (e.g. social distancing) that starts on a given day.
-  * An optional vaccination compartment (SEIRV) where a fraction of the
-    population is immunized before the outbreak begins, according to a
-    vaccine coverage and efficacy.
-
-The module can be used as a library (see `simulate`) or as a CLI
-(see `main` / `python seir_simulator.py --help`).
-
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Core Algorithmic & Evaluation Engines
-
-- **`ModelParams`**: Epidemiological parameters for the SEIR(V) model.
-- **`SimulationResult`**: Time series output of a simulation run plus summary statistics.
-- **`Scenario`** — dedicated module for scenario evaluation and state verification.
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
-```bash
-python cli.py
-```
-
-### 2. Direct Parameterized Evaluation
-```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
-```
-
-### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
-
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `suite_name` | Parameter / observation metric | Required |
-| `system_slug` | Parameter / observation metric | Required |
-| `standard_reference` | Parameter / observation metric | Required |
-| `test_cases` | Parameter / observation metric | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+Serve the static files locally:
 
 ```bash
-pytest -v
+python -m http.server 8000 --directory web
 ```
 
-Execute high-throughput batch simulation benchmarks:
+Open **http://localhost:8000/**. Change the parameters, select **Run simulation**, inspect the infectious-prevalence curves and summary table, or export daily compartment counts as CSV. The browser version uses a built-in fourth-order Runge–Kutta solver in JavaScript; it does not load Python, Pyodide, or a backend. A GitHub Pages deployment workflow is included; its public URL should only be linked after GitHub Pages is enabled and the deployed application is verified.
+
+The browser limits the parameter ranges to keep interactive calculations responsive. Computations occur locally; simulation inputs are not transmitted to a server. No external libraries or fonts are needed.
+
+## Python simulation
+
+Python 3.10+ is supported. Install dependencies and run the model:
 
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+python -m pip install -r requirements.txt
+python seir_simulator.py --model seir --population 100000 --r0 2.5 --days 180 \
+  --intervention-day 30 --intervention-reduction 0.5 \
+  --vaccination-coverage 0.4 --vaccination-efficacy 0.9
 ```
 
----
+To suppress the PNG plot, use `--no-plot`. Import `ModelParams`, `simulate`, `build_scenarios`, and `run_scenarios` from `seir_simulator.py` for programmatic use. Python integration uses SciPy `solve_ivp` with separate integration segments at an intervention discontinuity.
 
-## 🐳 Container Deployment
+Both implementations use a closed, homogeneous-mixing population. The SEIR models use an exposed but non-infectious compartment, permanent recovery, and no births or deaths. Vaccination assumes a protected fraction equal to coverage × efficacy at time zero. **Cumulative infected** means `(E + I + R) / population` at the final simulated day, including infections that have not yet recovered. The interactive browser plots infectious prevalence; it does not predict observed case reports.
+
+A vaccination scenario uses SEIRV. When the base model is SIR, comparison with vaccination therefore also changes the compartment structure, so that difference must not be interpreted as a pure vaccine effect.
+
+## Additional diagnostic API and CLI
+
+The pre-existing generic worker/audit components remain available for compatibility; **they are separate from the SEIR mathematical model** and do not provide calibrated epidemiological or clinical assessments.
 
 ```bash
-docker build -t seir-outbreak-simulator .
-docker run -p 8000:8000 seir-outbreak-simulator
+python cli.py audit --primary 12 --secondary 4
+python cli.py batch -i records.csv -o results.csv
+python cli.py serve --host 127.0.0.1 --port 8000
 ```
+
+The FastAPI endpoints include `/health`, `/metrics`, `/api/audit`, `/api/chat`, and `/api/audit/logs`. The batch CSV accepts `task_id`, `target_identifier`, `primary_metric`, `secondary_metric`, `status_descriptor`, and `is_critical_flag` (true/false or 1/0). The API and generic diagnostic components are not intended to process patient data. They have **no user authentication** and should not be exposed publicly without deployment hardening.
+
+The audit trail is held in process memory and signed with HMAC-SHA256. Set `AUDIT_SECRET_KEY` securely when a stable key is required; otherwise a random process-local key is generated at startup. The pattern-based identifier check is not a substitute for systematic de-identification or HIPAA compliance.
+
+## Tests
+
+```bash
+python -m pip install -r requirements.txt pytest
+python -m pytest -q
+node --test web/app.test.mjs
+```
+
+The web tests use Node.js 22+ with no npm dependencies. CI checks Python 3.10–3.12 and the JavaScript numerical solver. Python and browser solvers use different numerical methods, so small differences are expected.
+
+## Limitations and privacy
+
+This is an educational/research simulator, not a disease-specific forecast or a validated public-health decision system. There is no age structure, stochastic transmission, imported infections, waning immunity, reinfection, calibration, or uncertainty estimation. The static browser application processes parameters and produces exports locally. The optional Python API accepts and processes requests on the machine where it is deployed; avoid entering sensitive information.
+
+## Deployment and license
+
+The `.github/workflows/pages.yml` workflow deploys the `web/` directory through GitHub Pages once Pages is configured to use GitHub Actions. `Dockerfile` and `docker-compose.yml` support local deployment of the separate FastAPI diagnostic service; the compose configuration binds to localhost by default.
+
+Released under the [MIT License](LICENSE).
