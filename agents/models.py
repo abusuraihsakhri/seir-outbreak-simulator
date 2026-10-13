@@ -1,7 +1,6 @@
 """
 Pydantic v2 schemas and data definitions for Seir Outbreak Simulator.
-Domain: Antimicrobial Stewardship & Microbiology
-Standard: CLSI M100 / EUCAST / CDC NHSN Guidelines
+Generic diagnostic payloads (illustrative thresholds only; not clinically validated)
 """
 import datetime
 from enum import Enum
@@ -23,7 +22,7 @@ class SystemIntegrityStatus(str, Enum):
 
 class SystemTaskPayload(BaseModel):
     task_id: str = Field(..., description="Unique task / case identifier")
-    target_identifier: str = Field(..., description="Entity, patient key, or genomic/cryptographic target")
+    target_identifier: str = Field(..., description="Non-sensitive example target identifier")
     primary_metric: float = Field(..., description="Primary domain measurement or score")
     secondary_metric: float = Field(default=0.0, description="Secondary kinetic or confidence score")
     status_descriptor: str = Field(default="NOMINAL", description="Status code or phenotype descriptor")
@@ -49,7 +48,7 @@ class AgentAlert(BaseModel):
 class ConsensusDossier(BaseModel):
     dossier_id: str
     system_slug: str = "seir-outbreak-simulator"
-    domain: str = "Antimicrobial Stewardship & Microbiology"
+    domain: str = "Generic diagnostic workflow"
     task_id: str
     target_identifier: str
     overall_urgency: UrgencyLevel
