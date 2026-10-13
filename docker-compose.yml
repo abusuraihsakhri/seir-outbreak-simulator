@@ -1,17 +1,13 @@
-version: '3.8'
-
 services:
   seir-outbreak-simulator:
     build: .
-    container_name: seir-outbreak-simulator
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=seir-outbreak-simulator-prod-audit-key-2026
-      - MODEL_PROVIDER=mock
+      MODEL_PROVIDER: mock
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
