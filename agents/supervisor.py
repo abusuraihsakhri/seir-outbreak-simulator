@@ -1,6 +1,6 @@
 """
 Supervisor Orchestrator & Operations Intelligence for Seir Outbreak Simulator.
-Domain: Antimicrobial Stewardship & Microbiology
+Domain: Illustrative diagnostic worker workflow
 """
 import uuid
 from typing import Dict, Any, List, Optional
