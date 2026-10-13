@@ -1,7 +1,6 @@
 """
 Specialized Domain Worker Agents for Seir Outbreak Simulator.
-Domain: Antimicrobial Stewardship & Microbiology
-Standard: CLSI M100 / EUCAST / CDC NHSN Guidelines
+Example worker thresholds; not clinical laboratory reference standards
 """
 import uuid
 from typing import Dict, Any, List, Optional
