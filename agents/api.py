@@ -12,7 +12,7 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Seir Outbreak Simulator API",
-    description="Enterprise Distributed Component Platform (Antimicrobial Stewardship & Microbiology)",
+    description="Generic diagnostic workflow example; not a validated clinical simulator",
     version="3.0.0-ENTERPRISE",
 )
 
@@ -23,7 +23,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "seir-outbreak-simulator", "domain": "Antimicrobial Stewardship & Microbiology", "standard": "CLSI M100 / EUCAST / CDC NHSN Guidelines", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "HEALTHY", "service": "seir-outbreak-simulator", "domain": "Generic diagnostic workflow", "standard": "Illustrative thresholds only", "version": "3.0.0-ENTERPRISE"}
 
 
 @app.get("/metrics")
