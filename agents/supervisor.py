@@ -75,5 +75,5 @@ class SystemSupervisor:
 
     def query_supervisory_chat(self, query: str) -> str:
         PHIGuard.assert_no_phi(query)
-        prompt = f"Supervisor inquiry for Seir Outbreak Simulator under CLSI M100 / EUCAST / CDC NHSN Guidelines: {query}"
+        prompt = f"Diagnostic workflow mock inquiry (no guideline verification): {query}"
         return self.llm.invoke(prompt)
