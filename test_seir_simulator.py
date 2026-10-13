@@ -114,15 +114,15 @@ def test_vaccination_reduces_attack_rate_and_conserves_population():
 
 
 def test_peak_and_attack_rate_are_internally_consistent():
-    """peak_infected must equal max(I), peak_day must be the argmax time,
-    and total_attack_rate must be R_final / N."""
+    """Peak values and cumulative infected fraction must match compartments."""
     params = ModelParams(population=50_000, r0=2.0, infectious_period=5.0,
                           initial_infected=5, model="sir")
     result = simulate(params, days=150)
 
     assert result.peak_infected == np.max(result.I)
     assert result.peak_day == result.t[int(np.argmax(result.I))]
-    assert abs(result.total_attack_rate - result.R[-1] / params.population) < 1e-12
+    assert abs(result.total_attack_rate -
+               (result.E[-1] + result.I[-1] + result.R[-1]) / params.population) < 1e-12
 
 
 def test_build_scenarios_includes_baseline_and_requested_interventions():
@@ -180,3 +180,33 @@ if __name__ == "__main__":
         test()
         print(f"PASSED: {test.__name__}")
     print(f"\nAll {len(tests)} tests passed.")
+
+def test_unresolved_infections_are_included_in_attack_rate():
+    params = ModelParams(population=1_000, r0=0.0, model="sir", initial_infected=10)
+    result = simulate(params, days=1)
+    assert abs(result.total_attack_rate - 0.01) < 1e-10
+    assert result.I[-1] > 0
+
+
+def test_intervention_on_day_zero_matches_constant_reduced_r0():
+    reduced = ModelParams(population=20_000, model="seir", initial_infected=30,
+                          r0=3.0, intervention_day=0, intervention_reduction=0.5)
+    constant = ModelParams(population=20_000, model="seir", initial_infected=30, r0=1.5)
+    a = simulate(reduced, days=60)
+    b = simulate(constant, days=60)
+    assert np.allclose(a.I, b.I, atol=1e-4, rtol=1e-5)
+
+
+def test_input_validation_rejects_nan_inf_and_invalid_grid():
+    import pytest
+    for val in [float("nan"), float("inf"), -float("inf")]:
+        with pytest.raises(ValueError):
+            ModelParams(r0=val)
+        with pytest.raises(ValueError):
+            ModelParams(intervention_day=val)
+        with pytest.raises(ValueError):
+            simulate(ModelParams(), days=val)
+    with pytest.raises(ValueError):
+        simulate(ModelParams(), days=20, points_per_day=0)
+    with pytest.raises(ValueError):
+        simulate(ModelParams(), days=100_000, points_per_day=100)
