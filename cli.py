@@ -56,7 +56,7 @@ def main(argv=None):
         dossier = supervisor.process_task(payload)
         print("=" * 80)
         print(f"  SEIR OUTBREAK SIMULATOR")
-        print(f"  Domain: Antimicrobial Stewardship & Microbiology | Standard: CLSI M100 / EUCAST / CDC NHSN Guidelines")
+        print(f"  Example diagnostic thresholds only; no clinical guideline validation")
         print(f"  Dossier ID: {dossier.dossier_id} | Urgency: [{dossier.overall_urgency.value}]")
         print("=" * 80)
         for a in dossier.alerts:
