@@ -37,7 +37,8 @@ const derivatives = (p, t, y) => {
   const incidence = beta * s * i / p.population;
   const progress = p.model === "sir" ? 0 : e / p.incubationPeriod;
   const recoveries = i / p.infectiousPeriod;
-  return [-incidence, incidence - progress, progress - recoveries, recoveries, 0];
+  return [-incidence, p.model === "sir" ? 0 : incidence - progress,
+    (p.model === "sir" ? incidence : progress) - recoveries, recoveries, 0];
 };
 
 function rk4(p, t, y, h) {
