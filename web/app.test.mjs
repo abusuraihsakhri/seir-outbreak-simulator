@@ -67,7 +67,7 @@ test("invalid numerical inputs and impossible initial state are rejected", () =>
   assert.throws(() => validate({ ...base, r0: NaN }, 180), RangeError);
   assert.throws(() => simulate({ ...base, population: Infinity }), RangeError);
   assert.throws(() => simulate({ ...base, interventionDay: -1 }), RangeError);
-  assert.throws(() => simulate({ ...base, model: "seirv", vaccinationCoverage: 1 }), RangeError);
+  assert.throws(() => simulate({ ...base, model: "seirv", vaccinationCoverage: 1, vaccinationEfficacy: 1 }), RangeError);
   assert.throws(() => simulate(base, 1.5), RangeError);
   assert.throws(() => simulate(base, 731), RangeError);
 });
