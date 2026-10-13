@@ -3,6 +3,7 @@ Enterprise Security, PHI Outbound Guard, and HMAC-SHA256 Audit Trail.
 
 """
 import os
+import secrets
 import re
 import json
 import time
@@ -57,7 +58,11 @@ class PHIGuard:
 class AuditTrail:
     """Cryptographic Tamper-Evident HMAC-SHA256 Audit Trail."""
     def __init__(self, secret_key: Optional[str] = None):
-        self.secret_key = (secret_key or os.getenv("AUDIT_SECRET_KEY", "seir-outbreak-simulator-master-audit-key-2026")).encode("utf-8")
+        # Never use a repository-embedded signing key. Without configuration,
+        # use an ephemeral key: a process-local audit chain cannot be verified
+        # across restarts unless AUDIT_SECRET_KEY is supplied securely.
+        configured = secret_key if secret_key is not None else os.getenv("AUDIT_SECRET_KEY")
+        self.secret_key = configured.encode("utf-8") if configured else secrets.token_bytes(32)
         self.logs: List[Dict[str, Any]] = []
 
     def log(self, actor: str, actor_tier: str, event_type: str, details: Dict[str, Any]) -> Dict[str, Any]:
@@ -83,14 +88,25 @@ class AuditTrail:
         return entry
 
     def verify_integrity(self) -> bool:
-        for i, entry in enumerate(self.logs):
-            prev = self.logs[i-1]["current_hash"] if i > 0 else "GENESIS_BLOCK_0000000000000000"
-            if entry["prev_hash"] != prev:
+        prev = "GENESIS_BLOCK_0000000000000000"
+        for entry in self.logs:
+            try:
+                if entry["prev_hash"] != prev:
+                    return False
+                signed = "|".join(str(entry[key]) for key in (
+                    "audit_id", "timestamp", "actor", "actor_tier",
+                    "event_type", "payload_hash", "prev_hash",
+                ))
+                expected = hmac.new(self.secret_key, signed.encode("utf-8"), hashlib.sha256).hexdigest()
+                if not hmac.compare_digest(expected, entry["current_hash"]):
+                    return False
+                prev = entry["current_hash"]
+            except (KeyError, TypeError, ValueError):
                 return False
         return True
 
     def get_trail(self) -> List[Dict[str, Any]]:
-        return self.logs
+        return [entry.copy() for entry in self.logs]
 
 
 GLOBAL_AUDIT = AuditTrail()
