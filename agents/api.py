@@ -1,5 +1,5 @@
 """
-FastAPI REST API Server for Seir Outbreak Simulator.
+FastAPI example diagnostic API (separate from the SEIR mathematical model).
 """
 from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException
