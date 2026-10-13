@@ -80,6 +80,12 @@ def main(argv=None):
         return 0
 
     if args.command == "batch":
+        def csv_safe(value):
+            # Prevent formula execution when a result CSV is opened in a spreadsheet.
+            if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+                return "'" + value
+            return value
+
         def parse_flag(value):
             flag = str(value).strip().lower()
             if flag in {"true", "1", "yes", "y"}:
@@ -110,7 +116,7 @@ def main(argv=None):
             row_dict["integrity_status"] = dossier.integrity_status.value
             row_dict["total_alerts"] = dossier.total_alerts
             row_dict["audit_hash"] = dossier.audit_hash
-            out_rows.append(row_dict)
+            out_rows.append({key: csv_safe(value) for key, value in row_dict.items()})
 
         with open(args.output, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=out_fields)
