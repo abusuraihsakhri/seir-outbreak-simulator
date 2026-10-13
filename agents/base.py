@@ -57,6 +57,20 @@ class PHIGuard:
 
 class AuditTrail:
     """Cryptographic Tamper-Evident HMAC-SHA256 Audit Trail."""
+
+    _SIGNED_FIELDS = (
+        "audit_id", "timestamp", "actor", "actor_tier",
+        "event_type", "payload_hash", "prev_hash",
+    )
+
+    def _signature(self, entry: Dict[str, Any]) -> str:
+        payload = json.dumps(
+            {key: entry[key] for key in self._SIGNED_FIELDS},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hmac.new(self.secret_key, payload, hashlib.sha256).hexdigest()
+
     def __init__(self, secret_key: Optional[str] = None):
         # Never use a repository-embedded signing key. Without configuration,
         # use an ephemeral key: a process-local audit chain cannot be verified
@@ -72,8 +86,6 @@ class AuditTrail:
         audit_id = f"AUDIT-{int(time.time()*1000)}-{len(self.logs)+1}"
         ts = datetime.now(timezone.utc).isoformat()
         prev_hash = self.logs[-1]["current_hash"] if self.logs else "GENESIS_BLOCK_0000000000000000"
-        sign_string = f"{audit_id}|{ts}|{actor}|{actor_tier}|{event_type}|{payload_hash}|{prev_hash}"
-        signature = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
         entry = {
             "audit_id": audit_id,
             "timestamp": ts,
@@ -82,8 +94,8 @@ class AuditTrail:
             "event_type": event_type,
             "payload_hash": payload_hash,
             "prev_hash": prev_hash,
-            "current_hash": signature,
         }
+        entry["current_hash"] = self._signature(entry)
         self.logs.append(entry)
         return entry
 
@@ -93,11 +105,7 @@ class AuditTrail:
             try:
                 if entry["prev_hash"] != prev:
                     return False
-                signed = "|".join(str(entry[key]) for key in (
-                    "audit_id", "timestamp", "actor", "actor_tier",
-                    "event_type", "payload_hash", "prev_hash",
-                ))
-                expected = hmac.new(self.secret_key, signed.encode("utf-8"), hashlib.sha256).hexdigest()
+                expected = self._signature(entry)
                 if not hmac.compare_digest(expected, entry["current_hash"]):
                     return False
                 prev = entry["current_hash"]
