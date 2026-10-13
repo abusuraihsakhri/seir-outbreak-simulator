@@ -58,3 +58,16 @@ def test_hmac_signature_cannot_be_rewritten_by_moving_delimiters():
     trail.logs[0]["actor"] = "alice"
     trail.logs[0]["actor_tier"] = "admin|tier"
     assert not trail.verify_integrity()
+
+
+def test_batch_export_escapes_spreadsheet_formulas(tmp_path):
+    source, target = tmp_path / "input.csv", tmp_path / "output.csv"
+    source.write_text(
+        "task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag\n"
+        "TEST-FORMULA,=1+1,1,1,false\n",
+        encoding="utf-8",
+    )
+    assert main(["batch", "-i", str(source), "-o", str(target)]) == 0
+    with target.open(encoding="utf-8", newline="") as fh:
+        row = next(csv.DictReader(fh))
+    assert row["target_identifier"] == "'=1+1"
